@@ -1,5 +1,5 @@
 # seasonal-influenza-xyonix-blog
-Source used to create XYONIX blog for time series forecasting of seasonal influenza via Neural Basis Expansion Analysis for interpretable Time Series forecasting (N-BEATS). 
+Source used to create XYONIX [blog](https://www.xyonix.com/blog/using-ai-to-predict-influenza-c19-and-other-infectious-disease-rates) for time series forecasting of seasonal influenza via Neural Basis Expansion Analysis for interpretable Time Series forecasting (N-BEATS). 
 
 ![forecasting setup](images/lookback_horizon_sample.png)
 
@@ -9,7 +9,7 @@ Source used to create XYONIX blog for time series forecasting of seasonal influe
     * Influenza like illness data: https://www.cdc.gov/flu/weekly/index.htm
 * XYONIX
     * main: https://www.xyonix.com
-    * blog: https://www.xyonix.com/blog/using-ai-to-improve-sports-performance-amp-achieve-better-running-efficiency
+    * blog: https://www.xyonix.com/blog/using-ai-to-predict-influenza-c19-and-other-infectious-disease-rates
     * blog source: https://github.com/xyonix/seasonal-influenza-xyonix-blog
 * N-BEATS
     * article: https://arxiv.org/abs/1905.10437
