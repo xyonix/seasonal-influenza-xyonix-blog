@@ -1,9 +1,9 @@
-'''utils to generate N-BEAS model for seasonal influenza'''
+'''utils to generate N-BEATS model for seasonal influenza'''
 import os
 from datetime import date
 import numpy as np
 import torch
-from torch import optim
+from torch import optim 
 from torch.nn import functional
 from nbeats_pytorch.model import NBeatsNet
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -77,7 +77,6 @@ US_STATE_ABBREVIATIONS = {
 
 
 # model training, inference, and save/load
-
 def data_generator(x_full, y_full, batch_size):
     '''data generator'''
 
