@@ -3,3 +3,4 @@ ipykernel
 seaborn 
 matplotlib
 jupyter
+pylint

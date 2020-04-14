@@ -1,24 +1,83 @@
 '''utils to generate N-BEAS model for seasonal influenza'''
 import os
+from datetime import date
+import numpy as np
 import torch
 from torch import optim
 from torch.nn import functional
 from nbeats_pytorch.model import NBeatsNet
-import matplotlib.pyplot as plt
-import numpy as np
-import seaborn
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+import seaborn
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 #pylint: disable=too-many-arguments
 #pylint: disable=too-many-locals
 #pylint: disable=not-callable
 
-def plot_scatter(*args, **kwargs):
-    '''plot training progress'''
-    plt.plot(*args, **kwargs)
-    plt.scatter(*args, **kwargs, s=10)
+# state mappings
+US_STATE_ABBREVIATIONS = {
+    'Alabama': 'AL',
+    'Alaska': 'AK',
+    'American Samoa': 'AS',
+    'Arizona': 'AZ',
+    'Arkansas': 'AR',
+    'California': 'CA',
+    'Colorado': 'CO',
+    'Connecticut': 'CT',
+    'Delaware': 'DE',
+    'District of Columbia': 'DC',
+    'Florida': 'FL',
+    'Georgia': 'GA',
+    'Guam': 'GU',
+    'Hawaii': 'HI',
+    'Idaho': 'ID',
+    'Illinois': 'IL',
+    'Indiana': 'IN',
+    'Iowa': 'IA',
+    'Kansas': 'KS',
+    'Kentucky': 'KY',
+    'Louisiana': 'LA',
+    'Maine': 'ME',
+    'Maryland': 'MD',
+    'Massachusetts': 'MA',
+    'Michigan': 'MI',
+    'Minnesota': 'MN',
+    'Mississippi': 'MS',
+    'Missouri': 'MO',
+    'Montana': 'MT',
+    'Nebraska': 'NE',
+    'Nevada': 'NV',
+    'New Hampshire': 'NH',
+    'New Jersey': 'NJ',
+    'New Mexico': 'NM',
+    'New York': 'NY',
+    'North Carolina': 'NC',
+    'North Dakota': 'ND',
+    'Northern Mariana Islands':'MP',
+    'Ohio': 'OH',
+    'Oklahoma': 'OK',
+    'Oregon': 'OR',
+    'Pennsylvania': 'PA',
+    'Puerto Rico': 'PR',
+    'Rhode Island': 'RI',
+    'South Carolina': 'SC',
+    'South Dakota': 'SD',
+    'Tennessee': 'TN',
+    'Texas': 'TX',
+    'Utah': 'UT',
+    'Vermont': 'VT',
+    'Virgin Islands': 'VI',
+    'Virginia': 'VA',
+    'Washington': 'WA',
+    'West Virginia': 'WV',
+    'Wisconsin': 'WI',
+    'Wyoming': 'WY'
+}
 
-# simple batcher.
+
+# model training, inference, and save/load
+
 def data_generator(x_full, y_full, batch_size):
     '''data generator'''
 
@@ -35,7 +94,6 @@ def data_generator(x_full, y_full, batch_size):
         for batch_sample in split((x_full, y_full), batch_size):
             yield batch_sample
 
-# trainer
 def train_100_grad_steps(data, device, net, optimiser, training_losses, test_losses,
                          report_interval, checkpoint_path):
     '''train model for 100 gradient steps'''
@@ -189,8 +247,57 @@ def train_and_score_model(state, ili_data,
 
     return y_test, y_pred, checkpoint_path
 
-####
-# inference
+# file I/O
+def state_model_path(state, lookback, horizon, model_base_dir='saved_models'):
+    '''defines path to store state model'''
+    return os.path.join(model_base_dir, f'horizon_{horizon}/lookback_{lookback}/{state}')
+
+def load_inference_data(state, lookback, horizon=12, model_path=None):
+    '''load inference data stored on disk as numpy (NPZ) files'''
+    if model_path is None:
+        model_path = state_model_path(state, lookback, horizon)
+
+    assert os.path.exists(model_path)
+
+    model_file = os.path.join(model_path, f'{state}_inference.npz')
+    data = np.load(model_file)
+    y_pred = data['y_pred']
+    y_true = data['y_test']
+
+    return y_true, y_pred
+
+# inference metrics
+def symmetric_mean_absolute_percentage_error(y_true, y_pred):
+    '''symmetric mean absolute percentage error'''
+    assert y_true.shape == y_pred.shape
+    horizon = y_true.shape[1]
+    numerator = np.abs(y_true - y_pred)
+    denominator = (np.abs(y_true) + np.abs(y_pred))/2.0
+    return np.mean(1./horizon * np.sum(numerator/denominator, axis=1))
+
+def efficacy_metrics(y_true, y_pred):
+    '''efficacy metrics'''
+    mse = mean_squared_error(y_true, y_pred)
+    mae = mean_absolute_error(y_true, y_pred)
+    smape = symmetric_mean_absolute_percentage_error(y_true, y_pred)
+    return mae, mse, smape
+
+# plotting
+def plot_scatter(*args, **kwargs):
+    '''plot training progress'''
+    plt.plot(*args, **kwargs)
+    plt.scatter(*args, **kwargs, s=10)
+
+def ili_plot(series, **kwargs):
+    '''plot ILI series'''
+    plt.plot(series, linewidth=2, color='cornflowerblue', **kwargs)
+    axis = plt.gca()
+    axis.grid(True)
+    date_format = mdates.DateFormatter('%Y')
+    axis.xaxis.set_major_formatter(date_format)
+    plt.tick_params(labelsize=18)
+    axis.axvspan(date(2019, 12, 1), date.today(), alpha=0.2, color='red')
+
 def plot_error_heatmap(err_hist,
                        ylabels=None,
                        xlabels=range(1, 25),
@@ -201,15 +308,7 @@ def plot_error_heatmap(err_hist,
                        figsize=(20, 5),
                        fontsize=16,
                        fig_path=None):
-    """
-    Plot error heatmap
-    :param err_hist: error histogram
-    :param ylabels: ylabels
-    :param xlabels: xlabels
-    :param title: title
-    :param fig_path: path to save figure
-    :return:
-    """
+    """Plot error heatmap"""
     if ylabels is None:
         ylabels = list(np.flip(np.arange(-9, 10, 1), axis=0))
 
@@ -225,7 +324,6 @@ def plot_error_heatmap(err_hist,
     if fig_path is not None:
         plt.savefig(fig_path, bbox_inches='tight')
         plt.close(fig)
-
 
 def compute_error_histogram(y_true, y_pred, bins=np.arange(-9.5, 10.5, 1.0)):
     """
@@ -261,77 +359,3 @@ def plot_error_histogram(y_test, y_pred, title=None, label_start=-2, label_stop=
                        title=title,
                        cmap=cmap,
                        fig_path=fig_path)
-
-US_STATE_ABBREVIATIONS = {
-    'Alabama': 'AL',
-    'Alaska': 'AK',
-    'American Samoa': 'AS',
-    'Arizona': 'AZ',
-    'Arkansas': 'AR',
-    'California': 'CA',
-    'Colorado': 'CO',
-    'Connecticut': 'CT',
-    'Delaware': 'DE',
-    'District of Columbia': 'DC',
-    'Florida': 'FL',
-    'Georgia': 'GA',
-    'Guam': 'GU',
-    'Hawaii': 'HI',
-    'Idaho': 'ID',
-    'Illinois': 'IL',
-    'Indiana': 'IN',
-    'Iowa': 'IA',
-    'Kansas': 'KS',
-    'Kentucky': 'KY',
-    'Louisiana': 'LA',
-    'Maine': 'ME',
-    'Maryland': 'MD',
-    'Massachusetts': 'MA',
-    'Michigan': 'MI',
-    'Minnesota': 'MN',
-    'Mississippi': 'MS',
-    'Missouri': 'MO',
-    'Montana': 'MT',
-    'Nebraska': 'NE',
-    'Nevada': 'NV',
-    'New Hampshire': 'NH',
-    'New Jersey': 'NJ',
-    'New Mexico': 'NM',
-    'New York': 'NY',
-    'North Carolina': 'NC',
-    'North Dakota': 'ND',
-    'Northern Mariana Islands':'MP',
-    'Ohio': 'OH',
-    'Oklahoma': 'OK',
-    'Oregon': 'OR',
-    'Pennsylvania': 'PA',
-    'Puerto Rico': 'PR',
-    'Rhode Island': 'RI',
-    'South Carolina': 'SC',
-    'South Dakota': 'SD',
-    'Tennessee': 'TN',
-    'Texas': 'TX',
-    'Utah': 'UT',
-    'Vermont': 'VT',
-    'Virgin Islands': 'VI',
-    'Virginia': 'VA',
-    'Washington': 'WA',
-    'West Virginia': 'WV',
-    'Wisconsin': 'WI',
-    'Wyoming': 'WY'
-}
-
-def symmetric_mean_absolute_percentage_error(y_true, y_pred):
-    '''symmetric mean absolute percentage error'''
-    assert y_true.shape == y_pred.shape
-    horizon = y_true.shape[1]
-    numerator = np.abs(y_true - y_pred)
-    denominator = (np.abs(y_true) + np.abs(y_pred))/2.0
-    return np.mean(1./horizon * np.sum(numerator/denominator, axis=1))
-
-def efficacy_metrics(y_true, y_pred):
-    '''efficacy metrics'''
-    mse = mean_squared_error(y_true, y_pred)
-    mae = mean_absolute_error(y_true, y_pred)
-    smape = symmetric_mean_absolute_percentage_error(y_true, y_pred)
-    return mae, mse, smape
