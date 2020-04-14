@@ -1,0 +1,5 @@
+wfdb
+ipykernel 
+seaborn 
+matplotlib
+jupyter
