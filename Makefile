@@ -3,7 +3,7 @@ XYONIX_KERNEL=xyonix-flu
 VENV_DIR := ${BUILD_DIR}/venv/${XYONIX_KERNEL}
 NBEATS_DIR := ${BUILD_DIR}/src/n-beats
 
-all: clean install jupyter-kernel
+all: clean install run-jupyter
 
 install-venv: ${VENV_DIR}/bin/activate
 
