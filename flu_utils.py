@@ -289,7 +289,7 @@ def plot_scatter(*args, **kwargs):
 
 def ili_plot(series, **kwargs):
     '''plot ILI series'''
-    plt.plot(series, linewidth=2, color='cornflowerblue', **kwargs)
+    plt.plot(series, linewidth=2, color='cornflowerblue')
     axis = plt.gca()
     axis.grid(True)
     date_format = mdates.DateFormatter('%Y')
