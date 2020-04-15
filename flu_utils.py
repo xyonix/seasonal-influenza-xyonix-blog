@@ -3,7 +3,7 @@ import os
 from datetime import date
 import numpy as np
 import torch
-from torch import optim 
+from torch import optim
 from torch.nn import functional
 from nbeats_pytorch.model import NBeatsNet
 from sklearn.metrics import mean_squared_error, mean_absolute_error
@@ -289,7 +289,8 @@ def plot_scatter(*args, **kwargs):
 
 def ili_plot(series, **kwargs):
     '''plot ILI series'''
-    plt.plot(series, linewidth=2, color='cornflowerblue')
+    kwargs['color'] = 'cornflowerblue'
+    plt.plot(series, linewidth=2, **kwargs)
     axis = plt.gca()
     axis.grid(True)
     date_format = mdates.DateFormatter('%Y')
